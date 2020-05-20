@@ -33,6 +33,8 @@ class MyAI( AI ):
 		self.__lastY = startY
 		self.__moveList = []
 		self.__uncovered = {}
+		self.__totalTiles = rowDimension * colDimension
+		self.__totalMines = totalMines
 		########################################################################
 		#							YOUR CODE ENDS							   #
 		########################################################################
@@ -59,6 +61,8 @@ class MyAI( AI ):
 						continue
 					self.__moveList.append((coordX + x, coordY + y))
 
+		if self.__totalTiles - len(self.__uncovered) == self.__totalMines: # We win
+			return Action(AI.Action.LEAVE)
 
 		self.__uncovered[(self.__lastX, self.__lastY)] = number;
 
@@ -68,11 +72,12 @@ class MyAI( AI ):
 
 		if number == 0:
 			clearSurrounding(self.__lastX, self.__lastY)
+
+		# Makes the next move in the moveList
 		try:
 			currentAction = self.__moveList.pop(0)
 		except IndexError:
 			return Action(AI.Action.LEAVE)
-
 		self.__lastX = currentAction[0]
 		self.__lastY = currentAction[1]
 		return Action(AI.Action.UNCOVER, currentAction[0], currentAction[1])
