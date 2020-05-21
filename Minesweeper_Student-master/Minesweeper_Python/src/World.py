@@ -94,7 +94,7 @@ class World():
 			if self.__movesMade > self.__movesLimit:
 				break;
 
-			try: 
+			try:
 				action = self.__ai.getAction(self.__perceptNumber)
 				if self.__checkValidAction(action):
 					if self.__doMove(action):
