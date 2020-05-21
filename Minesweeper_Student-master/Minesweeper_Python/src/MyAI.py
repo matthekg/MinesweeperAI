@@ -16,6 +16,7 @@ import random
 from AI import AI
 from Action import Action
 from collections import defaultdict
+import random
 
 
 class Tile():
@@ -201,6 +202,28 @@ class MyAI(AI):
                         answer.append(self.__board[t.x+x][t.y+y])
             return answer
 
+        def cleanFrontier() -> None:
+            # Look at the new zeroes and clear them
+            for t in self.__frontier[0]:
+                clearSurrounding(t)
+                self.__frontier[0].remove(t)
+
+        def guess() -> None:
+            frontierList = []
+            for n in sorted(self.__frontier.keys()):
+                if n < 1: continue
+                for tile in self.__frontier[n]:
+                    s = getSurroundings(tile)
+                    for move in s:
+                        if not move.flag and move.covered:
+                            frontierList.append(move)
+            r = random.randint(0, len(frontierList))
+            chosen = frontierList.pop(r)
+            self.__moveList.append(tuple([Action(AI.Action.UNCOVER, chosen.x, chosen.y), chosen]))
+            print('GUESSING: {c}'.format(c=chosen))
+
+
+
 #################################################Main Logic#############################################################
         self.__lastTile = self.__board[self.__lastX][self.__lastY]
         # Updates Uncovered dict, which is Tile->number form. Always has original number
@@ -217,7 +240,7 @@ class MyAI(AI):
 
         # Check if we win
         if self.__totalTiles - self.__totalUncovered == self.__totalMines:
-            print('WINNER')
+            #print('WINNER')
             return Action(AI.Action.LEAVE)
 
         if number == 0:
@@ -229,15 +252,12 @@ class MyAI(AI):
                 for x in range(numFlags):
                     subtractOne(self.__lastTile)
 
-
+        cleanFrontier()
         # Makes the next move in the moveList
         if not self.__moveList:
-            print('MOVELIST EMPTY')
+            #print('MOVELIST EMPTY')
             flagObvious()
-            # Look at the new zeroes and clear them
-            for t in self.__frontier[0]:
-                clearSurrounding(t)
-                #self.__frontier[0].remove(t)
+            cleanFrontier()
 
         if False:  # debugs
             def PrettyList(l: iter) -> str:
@@ -262,11 +282,12 @@ class MyAI(AI):
             print(str(self.__totalTiles-self.__totalUncovered) + '->' + str(self.__totalMines))
 
             ##print('UNCOVERED:' + str(self.__uncovered))
-
-        currentAction = self.__moveList.pop(0)
-
-        # In the future replace with GUESS
-        # return Action(AI.Action.LEAVE)
+        try:
+            currentAction = self.__moveList.pop(0)
+        except:
+            #guess()
+            #currentAction = self.__moveList.pop(0)
+            return Action(AI.Action.LEAVE)
 
         self.__lastX = currentAction[1].x
         self.__lastY = currentAction[1].y
