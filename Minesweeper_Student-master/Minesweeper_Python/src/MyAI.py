@@ -16,24 +16,31 @@ import random
 from AI import AI
 from Action import Action
 from collections import defaultdict
+import itertools
 import random
 
 
 class Tile():
-    def __init__(self, m=False, c=True, f=False, xCoord=-1, yCoord=-1, number=-1):
+    def __init__(self, m=False, c=True, f=False, xCoord=-1, yCoord=-1, number=-1, l='. '):
         self.mine = m
         self.covered = c
         self.flag = f
         self.number = number
         self.x = xCoord
         self.y = yCoord
+        self.label = l
 
     def __repr__(self):
-        return 'Tile at ({x},{y}):n={n},c={c},f={f},m={m}'.format(x=self.x, y=self.y, n=self.number,
-                                                                  c=self.covered, f=self.flag, m=self.mine)
+        return 'Tile at ({x},{y}):n={n},c={c},f={f},m={m},l={l}'.format(x=self.x, y=self.y, n=self.number,
+                                                                  c=self.covered, f=self.flag, m=self.mine,
+                                                                        l=self.label)
 
     def __str__(self):
-        return 'Tile({x}, {y})'.format(x=self.x, y=self.y)
+        if self.label == '. ':
+            lab = ''
+        else:
+            lab = ': ' + self.label
+        return 'Tile({x}, {y}{l})'.format(x=self.x, y=self.y, l=lab)
 
     def __eq__(self, other):
         if self.mine == other.mine and \
@@ -45,6 +52,8 @@ class Tile():
             return True
         return False
 
+    def __hash__(self):
+        return hash((self.x, self.y))
 
 class MyAI(AI):
 
@@ -65,9 +74,15 @@ class MyAI(AI):
         self.__moveList = []
         self.__frontier = defaultdict(list)
         self.__uncovered = {}
+        self.__covered = dict()  # We could keep a dict of covered tiles keyed to their chance of being a bomb
         self.__totalTiles = rowDimension * colDimension
         self.__totalMines = totalMines
         self.__totalUncovered = 0
+        self.__flagsLeft = totalMines
+
+        for x in range(0, self.__colDimension):
+            for y in range(0, self.__rowDimension):
+                self.__covered[(x,y)] = self.__totalTiles / self.__totalMines
 
         # Creates an empty board that we will update
         self.__board = [[Tile(xCoord=j, yCoord=i) for i in range(self.__rowDimension)] for j in
@@ -111,7 +126,7 @@ class MyAI(AI):
         elif not self.__board[c][r].covered:
             print(str(self.__board[c][r].number) + ' ', end=" ")
         elif self.__board[c][r].covered:
-            print('. ', end=" ")
+            print(self.__board[c][r].label, end=" ")
 
     def __isInBounds(self, c: int, r: int) -> bool:
         """ Returns true if given coordinates are within the boundaries of the game board """
@@ -127,6 +142,9 @@ class MyAI(AI):
         ########################################################################
         #							YOUR CODE BEGINS						   #
         ########################################################################
+        debugging = True
+
+
         def clearSurrounding(t: Tile) -> None:
             """We know that the given coord is a 0, so uncover the surroundings"""
             s = getSurroundings(t)
@@ -172,7 +190,7 @@ class MyAI(AI):
             return answer.clear()
 
         def subtractOne(t: Tile) -> None:
-            #print('--' + repr(t))
+            # print('--' + repr(t))
             self.__frontier[t.number].remove(t)
             if t.number > -1:
                 t.number -= 1
@@ -183,10 +201,26 @@ class MyAI(AI):
             """Returns the num of flags in list"""
             return len([answer for answer in tileList if answer.flag])
 
+        def countUncovered(tileList: list) -> int:
+            '''Returns the num of uncovered tiles in a list'''
+            return len([answer for answer in tileList if not answer.covered])
+
+        def countCovered(tileList: list) -> int:
+            '''Returns the num of covered tiles in a list, excluding flags'''
+            return len([answer for answer in tileList if answer.covered and not answer.flag])
+
+        def getCovered(tileList: list) -> list:
+            '''Returns a list of all the covered tiles in a tile list, excluding flags'''
+            return [answer for answer in tileList if answer.covered and not answer.flag]
+
+        def getUncovered(tileList: list) -> list:
+            '''Returns a list of all the uncovered tiles in a tile list, excluding 0s'''
+            return [answer for answer in tileList if not answer.covered and answer.number != 0]
+
         def updateLabels(tileList: list) -> None:
             """Go through the given list and update labels"""
             for tile in tileList:
-                #print('Updating label: ' + repr(tile))
+                # print('Updating label: ' + repr(tile))
                 if not tile.covered:
                     subtractOne(tile)
                     if tile.number == 0:
@@ -199,7 +233,7 @@ class MyAI(AI):
                 for y in range(-1, 2):
                     if x == 0 and y == 0: continue
                     if self.__isInBounds(t.x + x, t.y + y):
-                        answer.append(self.__board[t.x+x][t.y+y])
+                        answer.append(self.__board[t.x + x][t.y + y])
             return answer
 
         def cleanFrontier() -> None:
@@ -208,29 +242,140 @@ class MyAI(AI):
                 clearSurrounding(t)
                 self.__frontier[0].remove(t)
 
+        def modelChecking() -> None:
+            '''Performs model checking and adds to the move list'''
+            frontier = {}
+            for num, lst in self.__frontier.items():
+                if num == -1:
+                    continue
+                for tile in lst:
+                    c = countCovered(getSurroundings(tile))
+                    if c == 0:
+                        continue
+                    frontier[(tile.x, tile.y)] = c
+
+            for coord in frontier.keys():
+                pick = self.__board[coord[0]][coord[1]]
+                scope = getCovered(getSurroundings(pick))
+
+                surroundingScope = set()
+                for s in scope:
+                    new = set(getUncovered(getSurroundings(s)))
+                    surroundingScope.update(new)
+
+                kb = surroundingScope
+
+                if debugging:
+                    print('Picked: ' + str(pick))
+                    print('SCOPE: ' + str(scope))
+                    print('Knowl:' + str(kb))
+
+
+
+                # Add labels to board
+                abc = 'abcdefghijklmnopqrstuvwxyz'
+                count = 0
+                for t in scope:
+                    t.label = abc[count] + ' '
+                    count += 1
+
+                if debugging: self.__printWorld()
+
+                possible = []
+                bombs = pick.number
+                for i in range(len(scope)):
+                    if bombs > 0:
+                        possible.append(1)
+                        bombs -= 1
+                    else:
+                        possible.append(0)
+                perms = set(itertools.permutations(possible))
+
+                if debugging:
+                    print({p for p in perms})
+
+                worlds = {}
+                cpy = list(perms)
+                # This loop removes the impossible worlds
+                for p in cpy:
+                    if debugging: print('Permutation: ' + str(p))
+                    labels = []
+                    i = 0
+                    for t in p:
+                        worlds[abc[i]] = t
+                        labels.append(abc[i])
+                        i += 1
+                    for tile in kb:
+                        b = tile.number;
+                        surroundings = getCovered(getSurroundings(tile))
+                        for s in surroundings:
+                            try:
+                                b -= worlds[s.label.strip(' ')]
+                            except:
+                                continue
+                        if b < 0:
+                            if debugging:
+                                print('IMPOSSIBLE')
+                                print(perms)
+                            perms.remove(p)
+                            break
+
+
+                if len(perms) == 1:
+                    if debugging: print('Only one world is possible, flag it!')
+                    flagWorld(pick, perms.pop())
+                else:
+                    pass
+                    #do smart guessing
+
+
+                for t in scope:
+                    t.label = '. '
+
+        def flagWorld(t : Tile, p: tuple) -> None:
+            '''Given a target tile and a possible world, flag the board with that world'''
+            surroundings = getCovered(getSurroundings(t))
+            if debugging:
+                print(t)
+                print(p)
+                print(surroundings)
+            for i in range(len(p)):
+                if p[i] == 1:
+                    flagMe = surroundings[i]
+                    if self.__board[flagMe.x][flagMe.y] not in [move[1] for move in self.__moveList]:
+                        self.__moveList.append(tuple([Action(AI.Action.FLAG, flagMe.x, flagMe.y),
+                                                  self.__board[flagMe.x][flagMe.y]]))
+
+
         def guess() -> None:
-            frontierList = []
-            for n in sorted(self.__frontier.keys()):
-                if n < 1: continue
-                for tile in self.__frontier[n]:
-                    s = getSurroundings(tile)
-                    for move in s:
-                        if not move.flag and move.covered:
-                            frontierList.append(move)
-            r = random.randint(0, len(frontierList))
-            chosen = frontierList.pop(r)
-            self.__moveList.append(tuple([Action(AI.Action.UNCOVER, chosen.x, chosen.y), chosen]))
-            print('GUESSING: {c}'.format(c=chosen))
+            """Make a guess here. Note: must append at least one move to movelist before function terminates"""
+            pass
+
+        def updateCovered() -> None:
+            """Iterate through covered and update their probabilities"""
+            for tile, chance in list(self.__covered.items()):
+                if tile in self.__uncovered.keys():
+                    del self.__covered[tile]
+                else:
+                    self.__covered[tile] = (self.__flagsLeft) / (self.__totalTiles - self.__totalUncovered -
+                                            self.__totalMines + self.__flagsLeft)
+
+                surroundings = getSurroundings(self.__board[tile[0]][tile[1]])
+                uncovered = countUncovered(surroundings)
+                if uncovered == 0:
+                    del self.__covered[tile]
 
 
 
-#################################################Main Logic#############################################################
+
+        #################################################Main Logic#############################################################
         self.__lastTile = self.__board[self.__lastX][self.__lastY]
-        # Updates Uncovered dict, which is Tile->number form. Always has original number
+        # Updates Uncovered dict, which is (coord)->number form. Always has original number
         self.__uncovered[(self.__lastX, self.__lastY)] = number
 
         # Update our knowledge of the board
-        if number == -1: # Last move was a flag
+        if number == -1:  # Last move was a flag
+            self.__flagsLeft -= 1
             self.__board[self.__lastX][self.__lastY].flag = True
             updateLabels(getSurroundings(self.__lastTile))
         else:
@@ -238,10 +383,17 @@ class MyAI(AI):
             self.__lastTile.covered = False
             self.__totalUncovered += 1
 
-        # Check if we win
-        if self.__totalTiles - self.__totalUncovered == self.__totalMines:
-            #print('WINNER')
-            return Action(AI.Action.LEAVE)
+
+        if debugging: print('Total Tiles: {t}, Uncovered: {u}, Mines: {m}'.format(t=self.__totalTiles, u=self.__totalUncovered, m=self.__totalMines))
+        if self.__totalTiles - self.__totalUncovered == self.__totalMines:  # if we've uncovered everything
+            if debugging: print('WINNER')                                   #
+            return Action(AI.Action.LEAVE)                                  #
+        elif self.__flagsLeft == 0:                                         # or if we flagged all of the mines
+            for x in range(self.__colDimension):
+                for y in range(self.__rowDimension):
+                    if(x, y) not in self.__uncovered.keys() and self.__board[x][y] not in [move[1] for move in self.__moveList]:
+                        self.__moveList.append(tuple([Action(AI.Action.UNCOVER, x, y), self.__board[x][y]]))
+            if debugging: print('COVERED:'); print(self.__covered)
 
         if number == 0:
             clearSurrounding(self.__lastTile)
@@ -255,11 +407,13 @@ class MyAI(AI):
         cleanFrontier()
         # Makes the next move in the moveList
         if not self.__moveList:
-            #print('MOVELIST EMPTY')
+            if debugging: print('MOVELIST EMPTY')
             flagObvious()
             cleanFrontier()
 
-        if False:  # debugs
+
+        ###########################################################
+        if debugging:
             def PrettyList(l: iter) -> str:
                 answer = ''
                 for item in l:
@@ -269,7 +423,6 @@ class MyAI(AI):
                         move = 'FLAG'
                     answer += '\t' + move + '\t' + str(item[1]) + '\n'
                 return answer
-
             print('FRONTIER:')
             for num in sorted(self.__frontier.keys()):
                 print('*' * 10 + str(num) + '*' * 10)
@@ -278,16 +431,24 @@ class MyAI(AI):
             print('MOVE LIST:')
             print(PrettyList([move for move in self.__moveList]))
             self.__printWorld()
-            print('Total tiles: {t} | Uncovered: {u} | Total Mines:{m}'.format(t=self.__totalTiles, u=self.__totalUncovered, m = self.__totalMines))
-            print(str(self.__totalTiles-self.__totalUncovered) + '->' + str(self.__totalMines))
-
+            print('Total tiles: {t} | Uncovered: {u} | Total Mines:{m}'.format(t=self.__totalTiles,
+                                                                               u=self.__totalUncovered,
+                                                                               m=self.__totalMines))
+            print(str(self.__totalTiles - self.__totalUncovered) + '->' + str(self.__totalMines))
             ##print('UNCOVERED:' + str(self.__uncovered))
+        ################################################################
+
+
         try:
             currentAction = self.__moveList.pop(0)
         except:
-            #guess()
-            #currentAction = self.__moveList.pop(0)
-            return Action(AI.Action.LEAVE)
+            modelChecking()
+            try:
+                currentAction = self.__moveList.pop(0)
+            except IndexError:
+                # Replace this with guess
+                # guess() # We HAVE to add something to move list here
+                currentAction = self.__moveList.pop(0)
 
         self.__lastX = currentAction[1].x
         self.__lastY = currentAction[1].y
