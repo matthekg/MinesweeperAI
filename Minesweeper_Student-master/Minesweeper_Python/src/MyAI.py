@@ -84,7 +84,7 @@ class MyAI(AI):
         self.__totalMines = totalMines
         self.__totalUncovered = 0
         self.__flagsLeft = totalMines
-        self.__guesslist = dict()
+        self.__temp_guess = {}
 
         for x in range(0, self.__colDimension):
             for y in range(0, self.__rowDimension):
@@ -148,7 +148,7 @@ class MyAI(AI):
         ########################################################################
         #							YOUR CODE BEGINS						   #
         ########################################################################
-        debugging = True
+        debugging = False
 
 
         def clearSurrounding(t: Tile) -> None:
@@ -327,48 +327,38 @@ class MyAI(AI):
                                 print(perms)
                             perms.remove(p)
                             break
-                print("SCOPE---",scope)
+                if debugging: print("SCOPE---",scope)
                 for p in perms:
-
-                    count = 0 ;
+                    count = 0
                     for k in scope:
-                        if (k.x,k.y) in temp_guess:
+                        if (k.x,k.y) in self.__temp_guess:
                             #print("COUNT IN GUESS-----",count)
                             #print("value of COUNT ------", p[count])
-                            temp_guess[(k.x,k.y)] += p[count]
+                            self.__temp_guess[(k.x,k.y)] += p[count]
                             #print("VALUE OF DICT--------", temp_guess[(k.x,k.y)])
                             count+=1
                         else:
                             #print("COUNT IN GUESS-----", count)
                             #print("value of COUNT ------", p[count])
-                            temp_guess[(k.x, k.y)] =0;
-                            temp_guess[(k.x,k.y)] += p[count]
+                            self.__temp_guess[(k.x, k.y)] =0;
+                            self.__temp_guess[(k.x,k.y)] += p[count]
                             #print("VALUE OF DICT--------", temp_guess[(k.x, k.y)])
                             count+=1
-
-
-
 
                 if len(perms) == 1:
                     if debugging: print('Only one world is possible, flag it!')
                     flagWorld(pick, perms.pop())
                 else:
-                    print("Multiple Options")
-                    guess_bool = True;
+                    pass
+                    #if debugging: print("Multiple Options")
+                    #guess()
                     #do smart guessing
 
 
                 for t in scope:
                     t.label = '. '
 
-            if(guess_bool):
-                print("TEMP GUESS ---- ", temp_guess)
-                print("GUESS TOO BE PICKED MIN OF DICT------",min(temp_guess,key=temp_guess.get) )
-                main_guess = min(temp_guess,key=temp_guess.get)
-                print("X------", main_guess[0])
-                self.__moveList.append(tuple([Action(AI.Action.UNCOVER, main_guess[0], main_guess[1]),
-                                              self.__board[main_guess[0]][main_guess[1]]]))
-                guess_bool = False;
+
 
         def flagWorld(t : Tile, p: tuple) -> None:
             '''Given a target tile and a possible world, flag the board with that world'''
@@ -387,7 +377,14 @@ class MyAI(AI):
 
         def guess() -> None:
             """Make a guess here. Note: must append at least one move to movelist before function terminates"""
-            pass
+            if debugging:
+                ("TEMP GUESS ---- ", self.__temp_guess)
+                print("GUESS TOO BE PICKED MIN OF DICT------", min(self.__temp_guess, key=self.__temp_guess.get))
+            main_guess = min(self.__temp_guess, key=self.__temp_guess.get)
+            if debugging: print("X------", main_guess[0])
+            self.__moveList.append(tuple([Action(AI.Action.UNCOVER, main_guess[0], main_guess[1]),
+                                          self.__board[main_guess[0]][main_guess[1]]]))
+            self.__temp_guess = {}
 
         def updateCovered() -> None:
             """Iterate through covered and update their probabilities"""
@@ -485,7 +482,7 @@ class MyAI(AI):
                 currentAction = self.__moveList.pop(0)
             except IndexError:
                 # Replace this with guess
-                # guess() # We HAVE to add something to move list here
+                guess() # We HAVE to add something to move list here
                 currentAction = self.__moveList.pop(0)
 
         self.__lastX = currentAction[1].x
