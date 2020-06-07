@@ -20,10 +20,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4542bee3-6c06-4303-acea-0946b930f545" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/MyAI.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/MyAI.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/testWorld.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/testWorld.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -96,6 +94,7 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
     <state x="1120" y="212" key="#Inspections" timestamp="1591416872316">

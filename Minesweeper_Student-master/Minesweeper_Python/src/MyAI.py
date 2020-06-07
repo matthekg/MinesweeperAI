@@ -84,7 +84,7 @@ class MyAI(AI):
         self.__totalMines = totalMines
         self.__totalUncovered = 0
         self.__flagsLeft = totalMines
-        self.__temp_guess = {}
+        self.__temp_guess = dict()
 
         for x in range(0, self.__colDimension):
             for y in range(0, self.__rowDimension):
@@ -328,6 +328,7 @@ class MyAI(AI):
                             perms.remove(p)
                             break
                 if debugging: print("SCOPE---",scope)
+                if debugging: print("LEGAL PERMS----",perms)
                 for p in perms:
                     count = 0
                     for k in scope:
@@ -377,14 +378,19 @@ class MyAI(AI):
 
         def guess() -> None:
             """Make a guess here. Note: must append at least one move to movelist before function terminates"""
+            #print("TEMP GUESS ---- ", self.__temp_guess)
             if debugging:
-                ("TEMP GUESS ---- ", self.__temp_guess)
+                print("TEMP GUESS ---- ", self.__temp_guess)
                 print("GUESS TOO BE PICKED MIN OF DICT------", min(self.__temp_guess, key=self.__temp_guess.get))
-            main_guess = min(self.__temp_guess, key=self.__temp_guess.get)
-            if debugging: print("X------", main_guess[0])
-            self.__moveList.append(tuple([Action(AI.Action.UNCOVER, main_guess[0], main_guess[1]),
+
+            try:
+                main_guess = min(self.__temp_guess, key=self.__temp_guess.get)
+                if debugging: print("X------", main_guess[0])
+                self.__moveList.append(tuple([Action(AI.Action.UNCOVER, main_guess[0], main_guess[1]),
                                           self.__board[main_guess[0]][main_guess[1]]]))
-            self.__temp_guess = {}
+                self.__temp_guess.clear()
+            except ValueError:
+                pass
 
         def updateCovered() -> None:
             """Iterate through covered and update their probabilities"""
