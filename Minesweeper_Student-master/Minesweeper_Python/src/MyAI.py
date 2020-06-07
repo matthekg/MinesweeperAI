@@ -1,4 +1,9 @@
-# ==============================CS-199==================================
+# ====================
+#
+#
+# \
+#
+#==========CS-199==================================
 # FILE:			MyAI.py
 #
 # AUTHOR: 		Justin Chung
@@ -79,6 +84,7 @@ class MyAI(AI):
         self.__totalMines = totalMines
         self.__totalUncovered = 0
         self.__flagsLeft = totalMines
+        self.__guesslist = dict()
 
         for x in range(0, self.__colDimension):
             for y in range(0, self.__rowDimension):
@@ -245,6 +251,8 @@ class MyAI(AI):
         def modelChecking() -> None:
             '''Performs model checking and adds to the move list'''
             frontier = {}
+            temp_guess = dict();
+            guess_bool = False;
             for num, lst in self.__frontier.items():
                 if num == -1:
                     continue
@@ -319,18 +327,48 @@ class MyAI(AI):
                                 print(perms)
                             perms.remove(p)
                             break
+                print("SCOPE---",scope)
+                for p in perms:
+
+                    count = 0 ;
+                    for k in scope:
+                        if (k.x,k.y) in temp_guess:
+                            #print("COUNT IN GUESS-----",count)
+                            #print("value of COUNT ------", p[count])
+                            temp_guess[(k.x,k.y)] += p[count]
+                            #print("VALUE OF DICT--------", temp_guess[(k.x,k.y)])
+                            count+=1
+                        else:
+                            #print("COUNT IN GUESS-----", count)
+                            #print("value of COUNT ------", p[count])
+                            temp_guess[(k.x, k.y)] =0;
+                            temp_guess[(k.x,k.y)] += p[count]
+                            #print("VALUE OF DICT--------", temp_guess[(k.x, k.y)])
+                            count+=1
+
+
 
 
                 if len(perms) == 1:
                     if debugging: print('Only one world is possible, flag it!')
                     flagWorld(pick, perms.pop())
                 else:
-                    pass
+                    print("Multiple Options")
+                    guess_bool = True;
                     #do smart guessing
 
 
                 for t in scope:
                     t.label = '. '
+
+            if(guess_bool):
+                print("TEMP GUESS ---- ", temp_guess)
+                print("GUESS TOO BE PICKED MIN OF DICT------",min(temp_guess,key=temp_guess.get) )
+                main_guess = min(temp_guess,key=temp_guess.get)
+                print("X------", main_guess[0])
+                self.__moveList.append(tuple([Action(AI.Action.UNCOVER, main_guess[0], main_guess[1]),
+                                              self.__board[main_guess[0]][main_guess[1]]]))
+                guess_bool = False;
 
         def flagWorld(t : Tile, p: tuple) -> None:
             '''Given a target tile and a possible world, flag the board with that world'''
