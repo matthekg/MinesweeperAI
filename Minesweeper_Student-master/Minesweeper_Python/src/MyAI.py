@@ -140,6 +140,7 @@ class MyAI(AI):
             return True
         return False
 
+
     ########################################################################
     #							YOUR CODE ENDS							   #
     ########################################################################
@@ -215,7 +216,7 @@ class MyAI(AI):
             '''Returns the num of covered tiles in a list, excluding flags'''
             return len([answer for answer in tileList if answer.covered and not answer.flag])
 
-        def getCovered(tileList: list) -> list:
+        def getCovered(tileList: Tile) -> list:
             '''Returns a list of all the covered tiles in a tile list, excluding flags'''
             return [answer for answer in tileList if answer.covered and not answer.flag]
 
@@ -376,12 +377,12 @@ class MyAI(AI):
                                                   self.__board[flagMe.x][flagMe.y]]))
 
 
-        def guess() -> None:
+        def guess(t: Tile) -> None:
             """Make a guess here. Note: must append at least one move to movelist before function terminates"""
             #print("TEMP GUESS ---- ", self.__temp_guess)
-            if debugging:
-                print("TEMP GUESS ---- ", self.__temp_guess)
-                print("GUESS TOO BE PICKED MIN OF DICT------", min(self.__temp_guess, key=self.__temp_guess.get))
+            #if debugging:
+             #   print("TEMP GUESS ---- ", self.__temp_guess)
+              #  print("GUESS TOO BE PICKED MIN OF DICT------", min(self.__temp_guess, key=self.__temp_guess.get))
 
             try:
                 main_guess = min(self.__temp_guess, key=self.__temp_guess.get)
@@ -390,21 +391,27 @@ class MyAI(AI):
                                           self.__board[main_guess[0]][main_guess[1]]]))
                 self.__temp_guess.clear()
             except ValueError:
-                pass
+                #print("BOARD INFO FOR RANDOM GUESS---" ,t)
+                random_list = list(t.keys())
+                #print("RANDOM GUESS LIST WHEN TEMP EMPTY-----", random_list)
+                random_guess = random.choice(random_list)
+
+                self.__moveList.append(tuple([Action(AI.Action.UNCOVER, random_guess[0], random_guess[1]),
+                                              self.__board[random_guess[0]][random_guess[1]]]))
 
         def updateCovered() -> None:
             """Iterate through covered and update their probabilities"""
             for tile, chance in list(self.__covered.items()):
                 if tile in self.__uncovered.keys():
                     del self.__covered[tile]
-                else:
-                    self.__covered[tile] = (self.__flagsLeft) / (self.__totalTiles - self.__totalUncovered -
-                                            self.__totalMines + self.__flagsLeft)
+                #else:
+                 #   self.__covered[tile] = (self.__flagsLeft) / (self.__totalTiles - self.__totalUncovered -
+                  #                          self.__totalMines + self.__flagsLeft)
 
                 surroundings = getSurroundings(self.__board[tile[0]][tile[1]])
                 uncovered = countUncovered(surroundings)
-                if uncovered == 0:
-                    del self.__covered[tile]
+                #if uncovered == 0:
+                 #   del self.__covered[tile]
 
 
 
@@ -423,6 +430,7 @@ class MyAI(AI):
             self.__lastTile.number = number
             self.__lastTile.covered = False
             self.__totalUncovered += 1
+        #updateCovered()
 
 
         if debugging: print('Total Tiles: {t}, Uncovered: {u}, Mines: {m}'.format(t=self.__totalTiles, u=self.__totalUncovered, m=self.__totalMines))
@@ -488,11 +496,13 @@ class MyAI(AI):
                 currentAction = self.__moveList.pop(0)
             except IndexError:
                 # Replace this with guess
-                guess() # We HAVE to add something to move list here
+                updateCovered()
+                guess(self.__covered) # We HAVE to add something to move list here
                 currentAction = self.__moveList.pop(0)
 
         self.__lastX = currentAction[1].x
         self.__lastY = currentAction[1].y
+
         return currentAction[0]
     ########################################################################
     #							YOUR CODE ENDS							   #
